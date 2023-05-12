@@ -206,7 +206,7 @@ def trpo(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     env = env_fn()
     obs_dim = env.observation_space.shape
     act_dim = env.action_space.shape
-    
+
     # Share information about action space with policy architecture
     ac_kwargs['action_space'] = env.action_space
 
@@ -281,7 +281,7 @@ def trpo(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
 
     def update():
         # Prepare hessian func, gradient eval
-        inputs = {k:v for k,v in zip(all_phs, buf.get())}
+        inputs = dict(zip(all_phs, buf.get()))
         Hx = lambda x : mpi_avg(sess.run(hvp, feed_dict={**inputs, v_ph: x}))
         g, pi_l_old, v_l_old = sess.run([gradient, pi_loss, v_loss], feed_dict=inputs)
         g, pi_l_old = mpi_avg(g), mpi_avg(pi_l_old)

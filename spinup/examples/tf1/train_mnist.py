@@ -46,7 +46,7 @@ def train_mnist(steps_per_epoch=100, epochs=5,
 
     # Run main training loop
     for epoch in range(epochs):
-        for t in range(steps_per_epoch):
+        for _ in range(steps_per_epoch):
             idxs = np.random.randint(0, len(x_train), 32)
             feed_dict = {x_ph: x_train[idxs],
                          y_ph: y_train[idxs]}

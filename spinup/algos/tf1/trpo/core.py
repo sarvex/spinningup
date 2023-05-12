@@ -42,7 +42,7 @@ def get_vars(scope=''):
 
 def count_vars(scope=''):
     v = get_vars(scope)
-    return sum([np.prod(var.shape.as_list()) for var in v])
+    return sum(np.prod(var.shape.as_list()) for var in v)
 
 def gaussian_likelihood(x, mu, log_std):
     pre_sum = -0.5 * (((x-mu)/(tf.exp(log_std)+EPS))**2 + 2*log_std + np.log(2*np.pi))

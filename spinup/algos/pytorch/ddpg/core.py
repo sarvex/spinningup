@@ -18,7 +18,7 @@ def mlp(sizes, activation, output_activation=nn.Identity):
     return nn.Sequential(*layers)
 
 def count_vars(module):
-    return sum([np.prod(p.shape) for p in module.parameters()])
+    return sum(np.prod(p.shape) for p in module.parameters())
 
 class MLPActor(nn.Module):
 

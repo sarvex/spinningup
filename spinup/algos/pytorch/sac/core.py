@@ -20,7 +20,7 @@ def mlp(sizes, activation, output_activation=nn.Identity):
     return nn.Sequential(*layers)
 
 def count_vars(module):
-    return sum([np.prod(p.shape) for p in module.parameters()])
+    return sum(np.prod(p.shape) for p in module.parameters())
 
 
 LOG_STD_MAX = 2
@@ -44,12 +44,7 @@ class SquashedGaussianMLPActor(nn.Module):
 
         # Pre-squash distribution and sample
         pi_distribution = Normal(mu, std)
-        if deterministic:
-            # Only used for evaluating policy at test time.
-            pi_action = mu
-        else:
-            pi_action = pi_distribution.rsample()
-
+        pi_action = mu if deterministic else pi_distribution.rsample()
         if with_logprob:
             # Compute logprob from Gaussian, and then apply correction for Tanh squashing.
             # NOTE: The correction formula is a little bit magic. To get an understanding 

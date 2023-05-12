@@ -36,7 +36,7 @@ def add_with_backends(algo_list):
     # helper function to build lists with backend-specific function names
     algo_list_with_backends = deepcopy(algo_list)
     for algo in algo_list:
-        algo_list_with_backends += [algo + '_tf1', algo + '_pytorch']
+        algo_list_with_backends += [f'{algo}_tf1', f'{algo}_pytorch']
     return algo_list_with_backends
 
 
@@ -51,13 +51,13 @@ def parse_and_execute_grid_search(cmd, args):
     if cmd in BASE_ALGO_NAMES:
         backend = DEFAULT_BACKEND[cmd]
         print('\n\nUsing default backend (%s) for %s.\n'%(backend, cmd))
-        cmd = cmd + '_' + backend
+        cmd = f'{cmd}_{backend}'
 
-    algo = eval('spinup.'+cmd)
+    algo = eval(f'spinup.{cmd}')
 
     # Before all else, check to see if any of the flags is 'help'.
     valid_help = ['--help', '-h', 'help']
-    if any([arg in valid_help for arg in args]):
+    if any(arg in valid_help for arg in args):
         print('\n\nShowing docstring for spinup.'+cmd+':\n')
         print(algo.__doc__)
         sys.exit()
@@ -74,7 +74,7 @@ def parse_and_execute_grid_search(cmd, args):
     # Make first pass through args to build base arg_dict. Anything
     # with a '--' in front of it is an argument flag and everything after,
     # until the next flag, is a possible value.
-    arg_dict = dict()
+    arg_dict = {}
     for i, arg in enumerate(args):
         assert i > 0 or '--' in arg, \
             friendly_err("You didn't specify a first flag.")
@@ -96,7 +96,7 @@ def parse_and_execute_grid_search(cmd, args):
     # shorthand. NOTE: modifying a dict while looping through its
     # contents is dangerous, and breaks in 3.6+. We loop over a fixed list
     # of keys to avoid this issue.
-    given_shorthands = dict()
+    given_shorthands = {}
     fixed_keys = list(arg_dict.keys())
     for k in fixed_keys:
         p1, p2 = k.find('['), k.find(']')
@@ -126,12 +126,11 @@ def parse_and_execute_grid_search(cmd, args):
     # Final pass: check for the special args that go to the 'run' command
     # for an experiment grid, separate them from the arg dict, and make sure
     # that they have unique values. The special args are given by RUN_KEYS.
-    run_kwargs = dict()
+    run_kwargs = {}
     for k in RUN_KEYS:
         if k in arg_dict:
             val = arg_dict[k]
-            assert len(val) == 1, \
-                friendly_err("You can only provide one value for %s."%k)
+            assert len(val) == 1, friendly_err(f"You can only provide one value for {k}.")
             run_kwargs[k] = val[0]
             del arg_dict[k]
 
@@ -143,11 +142,11 @@ def parse_and_execute_grid_search(cmd, args):
         exp_name = arg_dict['exp_name'][0]
         del arg_dict['exp_name']
     else:
-        exp_name = 'cmd_' + cmd
+        exp_name = f'cmd_{cmd}'
 
     # Make sure that if num_cpu > 1, the algorithm being used is compatible
     # with MPI.
-    if 'num_cpu' in run_kwargs and not(run_kwargs['num_cpu'] == 1):
+    if 'num_cpu' in run_kwargs and run_kwargs['num_cpu'] != 1:
         assert cmd in add_with_backends(MPI_COMPATIBLE_ALGOS), \
             friendly_err("This algorithm can't be run with num_cpu > 1.")
 
@@ -215,8 +214,10 @@ if __name__ == '__main__':
         print(help_msg)
 
         # Provide some useful details for algorithm running.
-        subs_list = ['--' + k.ljust(10) + 'for'.ljust(10) + '--' + v \
-                     for k,v in SUBSTITUTIONS.items()]
+        subs_list = [
+            f'--{k.ljust(10)}' + 'for'.ljust(10) + '--' + v
+            for k, v in SUBSTITUTIONS.items()
+        ]
         str_valid_subs = '\n\t' + '\n\t'.join(subs_list)
         special_info = dedent("""
             FYI: When running an algorithm, any keyword argument to the
@@ -238,7 +239,7 @@ if __name__ == '__main__':
 
     elif cmd in valid_utils:
         # Execute the correct utility file.
-        runfile = osp.join(osp.abspath(osp.dirname(__file__)), 'utils', cmd +'.py')
+        runfile = osp.join(osp.abspath(osp.dirname(__file__)), 'utils', f'{cmd}.py')
         args = [sys.executable if sys.executable else 'python', runfile] + sys.argv[2:]
         subprocess.check_call(args, env=os.environ)
     else:

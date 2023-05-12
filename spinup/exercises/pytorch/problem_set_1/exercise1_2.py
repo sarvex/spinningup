@@ -79,23 +79,13 @@ class MLPGaussianActor(nn.Module):
         Make log_std a PyTorch Parameter with the same shape as the action vector, 
         independent of observations, initialized to [-0.5, -0.5, ..., -0.5].
         (Make sure it's trainable!)
-        """
-        #######################
-        #                     #
-        #   YOUR CODE HERE    #
-        #                     #
-        #######################
-        # self.log_std = 
-        # self.mu_net = 
-        pass 
+        """ 
 
     #================================(Given, ignore)==========================================#
     def forward(self, obs, act=None):
         mu = self.mu_net(obs)
         pi = DiagonalGaussianDistribution(mu, self.log_std)
-        logp_a = None
-        if act is not None:
-            logp_a = pi.log_prob(act)
+        logp_a = pi.log_prob(act) if act is not None else None
         return pi, logp_a
     #=========================================================================================#
 

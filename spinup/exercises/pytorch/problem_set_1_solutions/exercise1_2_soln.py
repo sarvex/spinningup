@@ -43,7 +43,5 @@ class MLPGaussianActor(nn.Module):
     def forward(self, obs, act=None):
         mu = self.mu_net(obs)
         pi = DiagonalGaussianDistribution(mu, self.log_std)
-        logp_a = None
-        if act is not None:
-            logp_a = pi.log_prob(act)
+        logp_a = pi.log_prob(act) if act is not None else None
         return pi, logp_a

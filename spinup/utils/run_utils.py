@@ -70,7 +70,7 @@ def setup_logger_kwargs(exp_name, seed=None, data_dir=None, datestamp=False):
     # Make base path
     ymd_time = time.strftime("%Y-%m-%d_") if datestamp else ''
     relpath = ''.join([ymd_time, exp_name])
-    
+
     if seed is not None:
         # Make a seed-specific subfolder in the experiment directory.
         if datestamp:
@@ -81,9 +81,7 @@ def setup_logger_kwargs(exp_name, seed=None, data_dir=None, datestamp=False):
         relpath = osp.join(relpath, subfolder)
 
     data_dir = data_dir or DEFAULT_DATA_DIR
-    logger_kwargs = dict(output_dir=osp.join(data_dir, relpath), 
-                         exp_name=exp_name)
-    return logger_kwargs
+    return dict(output_dir=osp.join(data_dir, relpath), exp_name=exp_name)
 
 
 def call_experiment(exp_name, thunk, seed=0, num_cpu=1, data_dir=None, 
@@ -212,7 +210,7 @@ def call_experiment(exp_name, thunk, seed=0, num_cpu=1, data_dir=None,
 
 
 def all_bools(vals):
-    return all([isinstance(v,bool) for v in vals])
+    return all(isinstance(v,bool) for v in vals)
 
 def valid_str(v):
     """ 
@@ -226,15 +224,14 @@ def valid_str(v):
     if hasattr(v, '__name__'):
         return valid_str(v.__name__)
 
-    if isinstance(v, tuple) or isinstance(v, list):
+    if isinstance(v, (tuple, list)):
         return '-'.join([valid_str(x) for x in v])
 
     # Valid characters are '-', '_', and alphanumeric. Replace invalid chars
     # with '-'. 
     str_v = str(v).lower()
-    valid_chars = "-_%s%s" % (string.ascii_letters, string.digits)
-    str_v = ''.join(c if c in valid_chars else '-' for c in str_v)
-    return str_v
+    valid_chars = f"-_{string.ascii_letters}{string.digits}"
+    return ''.join(c if c in valid_chars else '-' for c in str_v)
 
 
 class ExperimentGrid:
@@ -261,7 +258,7 @@ class ExperimentGrid:
         # short name, write this as one line. If the name is long, break the
         # announcement over two lines.
         base_msg = 'ExperimentGrid %s runs over parameters:\n'
-        name_insert = '['+self._name+']'
+        name_insert = f'[{self._name}]'
         if len(base_msg%name_insert) <= 80:
             msg = base_msg%name_insert
         else:
@@ -271,8 +268,8 @@ class ExperimentGrid:
         # List off parameters, shorthands, and possible values.
         for k, v, sh in zip(self.keys, self.vals, self.shs):
             color_k = colorize(k.ljust(40), color='cyan', bold=True)
-            print('', color_k, '['+sh+']' if sh is not None else '', '\n')
-            for i, val in enumerate(v):
+            print('', color_k, f'[{sh}]' if sh is not None else '', '\n')
+            for val in v:
                 print('\t' + str(convert_json(val)))
             print()
 
@@ -283,7 +280,7 @@ class ExperimentGrid:
         nvars_total = int(np.prod([len(v) for v in self.vals]))
         if 'seed' in self.keys:
             num_seeds = len(self.vals[self.keys.index('seed')])
-            nvars_seedless = int(nvars_total / num_seeds)
+            nvars_seedless = nvars_total // num_seeds
         else:
             nvars_seedless = nvars_total
         print(' Variants, counting seeds: '.ljust(40), nvars_total)
@@ -297,9 +294,10 @@ class ExperimentGrid:
         # three letters of each colon-separated part.
         # But if the first three letters contains something which isn't
         # alphanumeric, shear that off.
-        valid_chars = "%s%s" % (string.ascii_letters, string.digits)
+        valid_chars = f"{string.ascii_letters}{string.digits}"
         def shear(x):
             return ''.join(z for z in x[:3] if z in valid_chars)
+
         sh = '-'.join([shear(x) for x in key.split(':')])
         return sh
 
@@ -348,17 +346,11 @@ class ExperimentGrid:
         """
 
         def get_val(v, k):
-            # Utility method for getting the correct value out of a variant
-            # given as a nested dict. Assumes that a parameter name, k, 
-            # describes a path into the nested dict, such that k='a:b:c'
-            # corresponds to value=variant['a']['b']['c']. Uses recursion
-            # to get this.
             if k in v:
                 return v[k]
-            else:
-                splits = k.split(':')
-                k0, k1 = splits[0], ':'.join(splits[1:])
-                return get_val(v[k0], k1)
+            splits = k.split(':')
+            k0, k1 = splits[0], ':'.join(splits[1:])
+            return get_val(v[k0], k1)
 
         # Start the name off with the name of the variant generator.
         var_name = self._name
@@ -372,7 +364,7 @@ class ExperimentGrid:
             # Except, however, when the parameter is 'seed'. Seed is handled
             # differently so that runs of the same experiment, with different 
             # seeds, will be grouped by experiment name.
-            if (len(v)>1 or inn) and not(k=='seed'):
+            if (len(v) > 1 or inn) and k != 'seed':
 
                 # Use the shorthand if available, otherwise the full name.
                 param_name = sh if sh is not None else k
@@ -385,9 +377,9 @@ class ExperimentGrid:
                 if all_bools(v): 
                     # If this is a param which only takes boolean values,
                     # only include in the name if it's True for this variant.
-                    var_name += ('_' + param_name) if variant_val else ''
+                    var_name += f'_{param_name}' if variant_val else ''
                 else:
-                    var_name += '_' + param_name + valid_str(variant_val)
+                    var_name += f'_{param_name}{valid_str(variant_val)}'
 
         return var_name.lstrip('_')
 
@@ -395,17 +387,12 @@ class ExperimentGrid:
         """
         Recursively builds list of valid variants.
         """
-        if len(keys)==1:
-            pre_variants = [dict()]
-        else:
-            pre_variants = self._variants(keys[1:], vals[1:])
-
+        pre_variants = [{}] if len(keys)==1 else self._variants(keys[1:], vals[1:])
         variants = []
         for val in vals[0]:
             for pre_v in pre_variants:
-                v = {}
-                v[keys[0]] = val
-                v.update(pre_v)
+                v = {keys[0]: val}
+                v |= pre_v
                 variants.append(v)
         return variants
 
@@ -447,7 +434,7 @@ class ExperimentGrid:
             """ 
             Build the full nested dict version of var, based on key names.
             """
-            new_var = dict()
+            new_var = {}
             unflatten_set = set()
 
             for k,v in var.items():
@@ -455,17 +442,16 @@ class ExperimentGrid:
                     splits = k.split(':')
                     k0 = splits[0]
                     assert k0 not in new_var or isinstance(new_var[k0], dict), \
-                        "You can't assign multiple values to the same key."
+                            "You can't assign multiple values to the same key."
 
-                    if not(k0 in new_var):
-                        new_var[k0] = dict()
+                    if k0 not in new_var:
+                        new_var[k0] = {}
 
                     sub_k = ':'.join(splits[1:])
                     new_var[k0][sub_k] = v
                     unflatten_set.add(k0)
                 else:
-                    assert not(k in new_var), \
-                        "You can't assign multiple values to the same key."
+                    assert k not in new_var, "You can't assign multiple values to the same key."
                     new_var[k] = v
 
             # Make sure to fill out the nested dicts.
@@ -500,7 +486,7 @@ class ExperimentGrid:
         variants = self.variants()
 
         # Print variant names for the user.
-        var_names = set([self.variant_name(var) for var in variants])
+        var_names = {self.variant_name(var) for var in variants}
         var_names = sorted(list(var_names))
         line = '='*DIV_LINE_WIDTH
         preparing = colorize('Preparing to run the following experiments...', 

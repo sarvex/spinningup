@@ -55,12 +55,7 @@ class ReplayBuffer:
 
 
 
-def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0, 
-        steps_per_epoch=4000, epochs=100, replay_size=int(1e6), gamma=0.99, 
-        polyak=0.995, pi_lr=1e-3, q_lr=1e-3, batch_size=100, start_steps=10000, 
-        update_after=1000, update_every=50, act_noise=0.1, target_noise=0.2, 
-        noise_clip=0.5, policy_delay=2, num_test_episodes=10, max_ep_len=1000, 
-        logger_kwargs=dict(), save_freq=1):
+def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs={}, seed=0, steps_per_epoch=4000, epochs=100, replay_size=int(1e6), gamma=0.99, polyak=0.995, pi_lr=1e-3, q_lr=1e-3, batch_size=100, start_steps=10000, update_after=1000, update_every=50, act_noise=0.1, target_noise=0.2, noise_clip=0.5, policy_delay=2, num_test_episodes=10, max_ep_len=1000, logger_kwargs={}, save_freq=1):
     """
     Twin Delayed Deep Deterministic Policy Gradient (TD3)
 
@@ -189,7 +184,7 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         #######################
         # pi, q1, q2, q1_pi = 
         pass
-    
+
     # Target policy network
     with tf.variable_scope('target'):
         #######################
@@ -199,7 +194,7 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         #######################
         # pi_targ =
         pass
-    
+
     # Target Q networks
     with tf.variable_scope('target', reuse=True):
 
@@ -294,12 +289,8 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
 
         # Until start_steps have elapsed, randomly sample actions
         # from a uniform distribution for better exploration. Afterwards, 
-        # use the learned policy (with some noise, via act_noise). 
-        if t > start_steps:
-            a = get_action(o, act_noise)
-        else:
-            a = env.action_space.sample()
-
+        # use the learned policy (with some noise, via act_noise).
+        a = get_action(o, act_noise) if t > start_steps else env.action_space.sample()
         # Step the env
         o2, r, d, _ = env.step(a)
         ep_ret += r
@@ -376,7 +367,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     from spinup.utils.run_utils import setup_logger_kwargs
-    logger_kwargs = setup_logger_kwargs(args.exp_name + '-' + args.env.lower(), args.seed)
+    logger_kwargs = setup_logger_kwargs(
+        f'{args.exp_name}-{args.env.lower()}', args.seed
+    )
 
     all_kwargs = dict(
         env_fn=lambda : gym.make(args.env), 
@@ -387,7 +380,7 @@ if __name__ == '__main__':
         logger_kwargs=logger_kwargs,
         epochs=10
         )
-    
+
     if args.use_soln:
         true_td3(**all_kwargs)
     else:

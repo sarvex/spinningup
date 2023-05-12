@@ -23,7 +23,7 @@ def mlp(sizes, activation, output_activation=nn.Identity):
 
 
 def count_vars(module):
-    return sum([np.prod(p.shape) for p in module.parameters()])
+    return sum(np.prod(p.shape) for p in module.parameters())
 
 
 def discount_cumsum(x, discount):
@@ -57,9 +57,7 @@ class Actor(nn.Module):
         # optionally compute the log likelihood of given actions under
         # those distributions.
         pi = self._distribution(obs)
-        logp_a = None
-        if act is not None:
-            logp_a = self._log_prob_from_distribution(pi, act)
+        logp_a = self._log_prob_from_distribution(pi, act) if act is not None else None
         return pi, logp_a
 
 

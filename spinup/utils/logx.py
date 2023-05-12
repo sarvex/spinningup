@@ -34,10 +34,9 @@ def colorize(string, color, bold=False, highlight=False):
 
     This function was originally written by John Schulman.
     """
-    attr = []
     num = color2num[color]
     if highlight: num += 10
-    attr.append(str(num))
+    attr = [str(num)]
     if bold: attr.append('1')
     return '\x1b[%sm%s\x1b[0m' % (';'.join(attr), string)
 
@@ -63,10 +62,12 @@ def restore_tf_graph(sess, fpath):
             )
     model_info = joblib.load(osp.join(fpath, 'model_info.pkl'))
     graph = tf.get_default_graph()
-    model = dict()
-    model.update({k: graph.get_tensor_by_name(v) for k,v in model_info['inputs'].items()})
-    model.update({k: graph.get_tensor_by_name(v) for k,v in model_info['outputs'].items()})
-    return model
+    return {
+        k: graph.get_tensor_by_name(v) for k, v in model_info['inputs'].items()
+    } | {
+        k: graph.get_tensor_by_name(v)
+        for k, v in model_info['outputs'].items()
+    }
 
 class Logger:
     """
@@ -98,12 +99,14 @@ class Logger:
         if proc_id()==0:
             self.output_dir = output_dir or "/tmp/experiments/%i"%int(time.time())
             if osp.exists(self.output_dir):
-                print("Warning: Log dir %s already exists! Storing info there anyway."%self.output_dir)
+                print(
+                    f"Warning: Log dir {self.output_dir} already exists! Storing info there anyway."
+                )
             else:
                 os.makedirs(self.output_dir)
             self.output_file = open(osp.join(self.output_dir, output_fname), 'w')
             atexit.register(self.output_file.close)
-            print(colorize("Logging data to %s"%self.output_file.name, 'green', bold=True))
+            print(colorize(f"Logging data to {self.output_file.name}", 'green', bold=True))
         else:
             self.output_dir = None
             self.output_file = None
@@ -129,8 +132,12 @@ class Logger:
         if self.first_row:
             self.log_headers.append(key)
         else:
-            assert key in self.log_headers, "Trying to introduce a new key %s that you didn't include in the first iteration"%key
-        assert key not in self.log_current_row, "You already set %s this iteration. Maybe you forgot to call dump_tabular()"%key
+            assert (
+                key in self.log_headers
+            ), f"Trying to introduce a new key {key} that you didn't include in the first iteration"
+        assert (
+            key not in self.log_current_row
+        ), f"You already set {key} this iteration. Maybe you forgot to call dump_tabular()"
         self.log_current_row[key] = val
 
     def save_config(self, config):
@@ -283,7 +290,7 @@ class Logger:
             key_lens = [len(key) for key in self.log_headers]
             max_key_len = max(15,max(key_lens))
             keystr = '%'+'%d'%max_key_len
-            fmt = "| " + keystr + "s | %15s |"
+            fmt = f"| {keystr}s | %15s |"
             n_slashes = 22 + max_key_len
             print("-"*n_slashes)
             for key in self.log_headers:
@@ -327,7 +334,7 @@ class EpochLogger(Logger):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.epoch_dict = dict()
+        self.epoch_dict = {}
 
     def store(self, **kwargs):
         """
@@ -337,7 +344,7 @@ class EpochLogger(Logger):
         values.
         """
         for k,v in kwargs.items():
-            if not(k in self.epoch_dict.keys()):
+            if k not in self.epoch_dict.keys():
                 self.epoch_dict[k] = []
             self.epoch_dict[k].append(v)
 
@@ -366,12 +373,12 @@ class EpochLogger(Logger):
             v = self.epoch_dict[key]
             vals = np.concatenate(v) if isinstance(v[0], np.ndarray) and len(v[0].shape)>0 else v
             stats = mpi_statistics_scalar(vals, with_min_and_max=with_min_and_max)
-            super().log_tabular(key if average_only else 'Average' + key, stats[0])
+            super().log_tabular(key if average_only else f'Average{key}', stats[0])
             if not(average_only):
-                super().log_tabular('Std'+key, stats[1])
+                super().log_tabular(f'Std{key}', stats[1])
             if with_min_and_max:
-                super().log_tabular('Max'+key, stats[3])
-                super().log_tabular('Min'+key, stats[2])
+                super().log_tabular(f'Max{key}', stats[3])
+                super().log_tabular(f'Min{key}', stats[2])
         self.epoch_dict[key] = []
 
     def get_stats(self, key):

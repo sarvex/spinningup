@@ -18,7 +18,7 @@ def get_vars(scope):
 
 def count_vars(scope):
     v = get_vars(scope)
-    return sum([np.prod(var.shape.as_list()) for var in v])
+    return sum(np.prod(var.shape.as_list()) for var in v)
 
 """
 Actor-Critics
